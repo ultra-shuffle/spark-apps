@@ -1,0 +1,6 @@
+logs/
+tmp/
+run/
+.metals/
+.scala-build/
+work/
