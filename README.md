@@ -56,4 +56,21 @@ Typical flow is:
 - Configure HiBench under `HiBench-7.1.1/conf/`
 - Use scripts under `HiBench-7.1.1/bin/` to build and run workloads
 
+### Quick run (minimal)
+
+This repo includes a thin wrapper that generates a local override config and runs a single benchmark:
+
+- Minimal smoke test (Spark-only): `./run-hibench.sh` (defaults to `micro/sleep` on `spark`)
+- Example with data (no HDFS required): `HADOOP_HOME=/path/to/hadoop ./run-hibench.sh micro/wordcount spark`
+- HDFS mode (requires HDFS): `HADOOP_HOME=/path/to/hadoop HIBENCH_FS=hdfs HDFS_MASTER=hdfs://localhost:8020 ./run-hibench.sh micro/wordcount spark`
+
+The wrapper writes `HiBench-7.1.1/conf/zzz-spark-apps.conf` (ignored by git) to set:
+
+- `hibench.spark.master` (defaults to this repo’s standalone master `spark://localhost:17077`)
+- `hibench.spark.home` (defaults to `SPARK_HOME`)
+- `hibench.hadoop.home` (from `HADOOP_HOME`)
+- `hibench.hdfs.master` / `hibench.hdfs.data.dir`:
+  - default: `file:///` + `${repo}/tmp/hibench-data` (local filesystem, no HDFS daemon)
+  - HDFS mode: set `HIBENCH_FS=hdfs` + `HDFS_MASTER=...`
+
 Refer to `HiBench-7.1.1/README.md` for HiBench-specific instructions.

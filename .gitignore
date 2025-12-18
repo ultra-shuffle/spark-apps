@@ -4,3 +4,7 @@ run/
 .metals/
 .scala-build/
 work/
+HiBench-7.1.1/report/
+HiBench-7.1.1/conf/hadoop.conf
+HiBench-7.1.1/conf/spark.conf
+HiBench-7.1.1/conf/zzz-spark-apps.conf

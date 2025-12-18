@@ -81,7 +81,7 @@
 # - SPARK_BEELINE_MEMORY, Memory for beeline (e.g. 1000M, 2G) (Default: 1G)
 
 
-_this_conf_dir="$(cd "$(dirname "$0")" && pwd)"
+_this_conf_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _project_root="$(cd "${_this_conf_dir}/.." && pwd)"
 
 # Prefer an explicitly exported SPARK_HOME. If it's not set, pick a reasonable
@@ -130,6 +130,10 @@ SPARK_WORKER_PORT=${SPARK_WORKER_PORT:-17078}
 export SPARK_WORKER_WEBUI_PORT
 export SPARK_WORKER_PORT
 
+# History Server UI port. Default differs from master UI (18080) to avoid conflict.
+SPARK_HISTORY_UI_PORT=${SPARK_HISTORY_UI_PORT:-18082}
+export SPARK_HISTORY_UI_PORT
+
 # If unset, Spark will decide; these defaults keep the node usable.
 SPARK_WORKER_CORES=${SPARK_WORKER_CORES:-"$(command -v nproc >/dev/null 2>&1 && nproc || echo 2)"}
 SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY:-"32g"}
@@ -139,3 +143,10 @@ export SPARK_WORKER_MEMORY
 # Heap for master/worker/history daemons themselves.
 SPARK_DAEMON_MEMORY=${SPARK_DAEMON_MEMORY:-"8g"}
 export SPARK_DAEMON_MEMORY
+
+# Marker used by this repo's helper scripts to distinguish "leftover env from a prior sourced run"
+# from explicit, user-provided overrides. If you previously ran `source ./start-standalone.sh` by
+# accident, this marker will persist in your shell and the scripts will clear the managed Spark
+# vars before re-sourcing this file.
+export SPARK_APPS_ENV_MARKER=1
+export SPARK_APPS_ENV_VARS="SPARK_CONF_DIR SPARK_LOG_DIR SPARK_PID_DIR SPARK_WORKER_DIR SPARK_LOCAL_DIRS SPARK_MASTER_HOST SPARK_MASTER_PORT SPARK_MASTER_WEBUI_PORT SPARK_WORKER_PORT SPARK_WORKER_WEBUI_PORT SPARK_HISTORY_UI_PORT SPARK_WORKER_CORES SPARK_WORKER_MEMORY SPARK_DAEMON_MEMORY SPARK_HISTORY_OPTS"
