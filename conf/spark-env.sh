@@ -132,10 +132,10 @@ export SPARK_WORKER_PORT
 
 # If unset, Spark will decide; these defaults keep the node usable.
 SPARK_WORKER_CORES=${SPARK_WORKER_CORES:-"$(command -v nproc >/dev/null 2>&1 && nproc || echo 2)"}
-SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY:-"4g"}
+SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY:-"32g"}
 export SPARK_WORKER_CORES
 export SPARK_WORKER_MEMORY
 
 # Heap for master/worker/history daemons themselves.
-SPARK_DAEMON_MEMORY=${SPARK_DAEMON_MEMORY:-"1g"}
+SPARK_DAEMON_MEMORY=${SPARK_DAEMON_MEMORY:-"8g"}
 export SPARK_DAEMON_MEMORY
