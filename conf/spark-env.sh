@@ -87,14 +87,15 @@ _project_root="$(cd "${_this_conf_dir}/.." && pwd)"
 # Prefer an explicitly exported SPARK_HOME. If it's not set, pick a reasonable
 # default based on common install locations used in this workspace.
 if [[ -z "${SPARK_HOME:-}" ]]; then
-	if [[ -d "/home/yxz/spark-3.5" ]]; then
-		SPARK_HOME="/home/yxz/spark-3.5"
-	elif [[ -d "/mnt/spark" ]]; then
-		SPARK_HOME="/mnt/spark"
-	else
-		SPARK_HOME="/home/yxz/spark-3.5"
-	fi
+	for candidate in "${_project_root}/../spark-"* "/mnt/spark"; do
+		if [[ -d "${candidate}" && -x "${candidate}/bin/spark-submit" ]]; then
+			SPARK_HOME="${candidate}"
+			break
+		fi
+	done
 fi
+
+: "${SPARK_HOME:?SPARK_HOME is not set; export SPARK_HOME=/path/to/spark}"
 
 # Use this project's conf directory by default so Spark picks up:
 # - this spark-env.sh
