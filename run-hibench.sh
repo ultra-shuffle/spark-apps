@@ -160,6 +160,10 @@ fi
 
 [[ -x "${SPARK_HOME}/bin/spark-submit" ]] || die "Spark executable not found: ${SPARK_HOME}/bin/spark-submit"
 
+if [[ -z "${HADOOP_HOME:-}" && -x "/home/yxz/hadoop/bin/hadoop" ]]; then
+  export HADOOP_HOME="/home/yxz/hadoop"
+fi
+
 [[ -n "${HADOOP_HOME:-}" ]] || die "HADOOP_HOME is not set (use --hadoop-home or export HADOOP_HOME)"
 [[ -x "${HADOOP_HOME}/bin/hadoop" ]] || die "Hadoop executable not found: ${HADOOP_HOME}/bin/hadoop"
 
@@ -242,8 +246,13 @@ hibench.hdfs.master            ${hdfs_master}
 hibench.hdfs.data.dir          ${data_dir_uri}
 
 # Spark (standalone)
-hibench.spark.home             ${SPARK_HOME}
+hibench.spark.home             \$SPARK_HOME
 hibench.spark.master           ${spark_master}
+
+# HiBench monitoring uses SSH to connect to these hosts. For a single-node
+# standalone setup, keep this local to avoid SSH host key prompts.
+hibench.masters.hostnames      localhost
+hibench.slaves.hostnames       localhost
 
 spark.executor.memory          ${executor_memory}
 spark.driver.memory            ${driver_memory}
