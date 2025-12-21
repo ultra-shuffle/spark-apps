@@ -163,8 +163,8 @@ fi
 [[ -n "${HADOOP_HOME:-}" ]] || die "HADOOP_HOME is not set (use --hadoop-home or export HADOOP_HOME)"
 [[ -x "${HADOOP_HOME}/bin/hadoop" ]] || die "Hadoop executable not found: ${HADOOP_HOME}/bin/hadoop"
 
-if ! command -v python2 >/dev/null 2>&1; then
-  die "python2 is required by HiBench (HiBench-7.1.1/bin/functions/load_config.py)"
+if ! command -v python3 >/dev/null 2>&1; then
+  die "python3 is required by HiBench (HiBench-7.1.1/bin/functions/load_config.py)"
 fi
 
 master_host="${SPARK_MASTER_HOST:-localhost}"
