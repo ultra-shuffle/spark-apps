@@ -32,6 +32,7 @@ fi
 # Optional: stop SCache if this workspace started it.
 SCACHE_HOME="${SCACHE_HOME:-/home/yxz/SCache}"
 _scache_marker="${_root_dir}/run/scache.started"
+_scache_conf_marker="${_root_dir}/run/scache.conf.hash"
 
 # Stop local worker/master using pid files in SPARK_PID_DIR (set in conf/spark-env.sh).
 # This avoids stopping other users' Spark daemons.
@@ -48,6 +49,7 @@ if [[ -f "${_scache_marker}" ]]; then
     echo "WARNING: SCache marker exists but missing executable: ${SCACHE_HOME}/sbin/stop-scache.sh" >&2
   fi
   rm -f "${_scache_marker}" || true
+  rm -f "${_scache_conf_marker}" || true
 fi
 
 # Helpful status output

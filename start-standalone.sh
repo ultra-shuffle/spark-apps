@@ -43,15 +43,110 @@ mkdir -p "${SPARK_LOG_DIR:-${_root_dir}/logs}" \
 ENABLE_SCACHE="${ENABLE_SCACHE:-1}"
 SCACHE_HOME="${SCACHE_HOME:-/home/yxz/SCache}"
 _scache_marker="${_root_dir}/run/scache.started"
+_scache_conf_marker="${_root_dir}/run/scache.conf.hash"
+
+sync_scache_conf() {
+  local conf_dir="${SCACHE_CONF_OVERRIDE_DIR:-${_root_dir}/conf/scache}"
+  local conf_src="${conf_dir}/scache.conf"
+  local slaves_src="${conf_dir}/slaves"
+  local conf_dst="${SCACHE_HOME}/conf/scache.conf"
+  local slaves_dst="${SCACHE_HOME}/conf/slaves"
+
+  if [[ ! -f "${conf_src}" ]]; then
+    echo "ERROR: SCache conf override missing: ${conf_src}" >&2
+    return 1
+  fi
+
+  mkdir -p "${SCACHE_HOME}/conf"
+
+  if [[ -e "${conf_dst}" && ! -L "${conf_dst}" && ! -e "${conf_dst}.orig" ]]; then
+    cp -f "${conf_dst}" "${conf_dst}.orig"
+  fi
+  ln -sf "${conf_src}" "${conf_dst}"
+  echo "SCache conf override: ${conf_dst} -> ${conf_src}"
+
+  if [[ -f "${slaves_src}" ]]; then
+    if [[ -e "${slaves_dst}" && ! -L "${slaves_dst}" && ! -e "${slaves_dst}.orig" ]]; then
+      cp -f "${slaves_dst}" "${slaves_dst}.orig"
+    fi
+    ln -sf "${slaves_src}" "${slaves_dst}"
+    echo "SCache slaves override: ${slaves_dst} -> ${slaves_src}"
+  fi
+}
+
+scache_conf_hash() {
+  local conf_dir="${SCACHE_CONF_OVERRIDE_DIR:-${_root_dir}/conf/scache}"
+  local conf_src="${conf_dir}/scache.conf"
+  local slaves_src="${conf_dir}/slaves"
+
+  if [[ ! -f "${conf_src}" ]]; then
+    return 0
+  fi
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    if [[ -f "${slaves_src}" ]]; then
+      { sha256sum "${conf_src}" "${slaves_src}" || true; } | sha256sum | awk '{print $1}' || true
+    else
+      { sha256sum "${conf_src}" || true; } | sha256sum | awk '{print $1}' || true
+    fi
+  elif command -v shasum >/dev/null 2>&1; then
+    if [[ -f "${slaves_src}" ]]; then
+      { shasum -a 256 "${conf_src}" "${slaves_src}" || true; } | shasum -a 256 | awk '{print $1}' || true
+    else
+      { shasum -a 256 "${conf_src}" || true; } | shasum -a 256 | awk '{print $1}' || true
+    fi
+  else
+    echo ""
+  fi
+}
+
+scache_pid_running() {
+  local pid_file="$1"
+  local main_class="$2"
+  local pid
+
+  pid="$(cat "${pid_file}" 2>/dev/null || true)"
+  [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null &&
+    ps -p "${pid}" -o args= 2>/dev/null | grep -Fq "${main_class}"
+}
+
+scache_is_running() {
+  local pid_dir="${SCACHE_PID_DIR:-${SCACHE_HOME}/tmp/pids}"
+
+  scache_pid_running "${pid_dir}/scache-master.pid" "org.scache.deploy.ScacheMaster" ||
+    scache_pid_running "${pid_dir}/scache-client.pid" "org.scache.deploy.ScacheClient"
+}
 
 if [[ "${ENABLE_SCACHE}" == "1" ]]; then
   if [[ -x "${SCACHE_HOME}/sbin/start-scache.sh" ]]; then
-    if [[ -f "${_scache_marker}" ]]; then
-      echo "SCache marker exists; assuming already started: ${_scache_marker}"
+    sync_scache_conf
+    _new_hash="$(scache_conf_hash)"
+    _old_hash="$(cat "${_scache_conf_marker}" 2>/dev/null || true)"
+
+    if scache_is_running; then
+      if [[ -f "${_scache_marker}" && -n "${_new_hash}" && "${_new_hash}" == "${_old_hash}" ]]; then
+        echo "SCache already running; config unchanged; leaving it running"
+      else
+        echo "Restarting SCache to apply conf override"
+        if [[ -x "${SCACHE_HOME}/sbin/stop-scache.sh" ]]; then
+          "${SCACHE_HOME}/sbin/stop-scache.sh" || true
+        fi
+        rm -f "${_scache_marker}" || true
+        rm -f "${_scache_conf_marker}" || true
+        echo "Starting SCache via ${SCACHE_HOME}/sbin/start-scache.sh"
+        "${SCACHE_HOME}/sbin/start-scache.sh"
+        touch "${_scache_marker}"
+        if [[ -n "${_new_hash}" ]]; then
+          echo "${_new_hash}" > "${_scache_conf_marker}"
+        fi
+      fi
     else
       echo "Starting SCache via ${SCACHE_HOME}/sbin/start-scache.sh"
       "${SCACHE_HOME}/sbin/start-scache.sh"
       touch "${_scache_marker}"
+      if [[ -n "${_new_hash}" ]]; then
+        echo "${_new_hash}" > "${_scache_conf_marker}"
+      fi
     fi
   else
     echo "ERROR: ENABLE_SCACHE=1 but missing executable: ${SCACHE_HOME}/sbin/start-scache.sh" >&2
