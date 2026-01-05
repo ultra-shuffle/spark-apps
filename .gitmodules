@@ -1,3 +1,6 @@
 [submodule "HiBench-7.1.1"]
 	path = HiBench-7.1.1
 	url = git@github.com:XingZYu/hibench.git
+[submodule "tpcds-kit"]
+	path = tpcds-kit
+	url = https://github.com/databricks/tpcds-kit.git
