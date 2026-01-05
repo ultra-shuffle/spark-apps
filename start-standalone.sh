@@ -158,6 +158,46 @@ master_host="${SPARK_MASTER_HOST:-localhost}"
 master_port="${SPARK_MASTER_PORT:-17077}"
 master_url="spark://${master_host}:${master_port}"
 
+# Optional: bind the worker (and thus launched executors) to specific NUMA nodes.
+#
+# Examples:
+#   # Run Spark worker/executors on NUMA node 0 (CPU+mem), SCache pool on node 1:
+#   SPARK_WORKER_CPU_NODE=0 SPARK_WORKER_MEM_NODE=0 \
+#   SCACHE_CLIENT_SCRIPT_OPTS="--cpu-node 1 --mem-node 1" \
+#   ./start-standalone.sh
+#
+#   # Raw numactl options (overrides *_CPU_NODE/*_MEM_NODE):
+#   SPARK_WORKER_NUMACTL_OPTS="--cpunodebind=0 --membind=0" ./start-standalone.sh
+#
+SPARK_WORKER_CPU_NODE="${SPARK_WORKER_CPU_NODE:-}"
+SPARK_WORKER_MEM_NODE="${SPARK_WORKER_MEM_NODE:-${SPARK_WORKER_NUMA_NODE:-}}"
+SPARK_WORKER_NUMACTL_OPTS="${SPARK_WORKER_NUMACTL_OPTS:-}"
+
+_worker_cmd_prefix=()
+if [[ -n "${SPARK_WORKER_NUMACTL_OPTS// /}" ]]; then
+  command -v numactl >/dev/null 2>&1 || {
+    echo "ERROR: SPARK_WORKER_NUMACTL_OPTS set but numactl is not installed" >&2
+    exit 1
+  }
+  # shellcheck disable=SC2206
+  _worker_cmd_prefix=(numactl ${SPARK_WORKER_NUMACTL_OPTS})
+else
+  _numa_args=()
+  if [[ -n "${SPARK_WORKER_CPU_NODE// /}" ]]; then
+    _numa_args+=(--cpunodebind="${SPARK_WORKER_CPU_NODE}")
+  fi
+  if [[ -n "${SPARK_WORKER_MEM_NODE// /}" ]]; then
+    _numa_args+=(--membind="${SPARK_WORKER_MEM_NODE}")
+  fi
+  if [[ ${#_numa_args[@]} -gt 0 ]]; then
+    command -v numactl >/dev/null 2>&1 || {
+      echo "ERROR: SPARK_WORKER_CPU_NODE/SPARK_WORKER_MEM_NODE set but numactl is not installed" >&2
+      exit 1
+    }
+    _worker_cmd_prefix=(numactl "${_numa_args[@]}")
+  fi
+fi
+
 # Ensure History Server UI port doesn't collide with master UI port.
 # Respect an explicitly set SPARK_HISTORY_OPTS; otherwise set a sane default.
 if [[ -z "${SPARK_HISTORY_OPTS:-}" ]]; then
@@ -170,7 +210,12 @@ fi
 "${SPARK_HOME}/sbin/start-master.sh"
 
 # Start a single local worker (no SSH) so it inherits this environment.
-"${SPARK_HOME}/sbin/start-worker.sh" --webui-port "${SPARK_WORKER_WEBUI_PORT:-18081}" "${master_url}"
+if [[ ${#_worker_cmd_prefix[@]} -gt 0 ]]; then
+  echo "Starting Spark worker under: ${_worker_cmd_prefix[*]}"
+fi
+"${_worker_cmd_prefix[@]}" "${SPARK_HOME}/sbin/start-worker.sh" \
+  --webui-port "${SPARK_WORKER_WEBUI_PORT:-18081}" \
+  "${master_url}"
 
 # Start History Server (reads spark.history.fs.logDirectory from conf/spark-defaults.conf).
 "${SPARK_HOME}/sbin/start-history-server.sh"

@@ -37,7 +37,26 @@ master_url="spark://${master_host}:${master_port}"
 DRIVER_MEMORY="${DRIVER_MEMORY:-16G}"
 EXECUTOR_MEMORY="${EXECUTOR_MEMORY:-16G}"
 EXECUTOR_CORES="${EXECUTOR_CORES:-8}"
+NUM_EXECUTORS="${NUM_EXECUTORS:-}"
+
+_cores_max_was_set=0
+if [[ -n "${CORES_MAX+x}" ]]; then
+  _cores_max_was_set=1
+fi
+
 CORES_MAX="${CORES_MAX:-${EXECUTOR_CORES}}"
+if [[ -n "${NUM_EXECUTORS}" && "${_cores_max_was_set}" == "0" ]]; then
+  if ! [[ "${NUM_EXECUTORS}" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: NUM_EXECUTORS must be an integer, got: ${NUM_EXECUTORS}" >&2
+    exit 1
+  fi
+  if ! [[ "${EXECUTOR_CORES}" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: EXECUTOR_CORES must be an integer, got: ${EXECUTOR_CORES}" >&2
+    exit 1
+  fi
+  CORES_MAX="$((NUM_EXECUTORS * EXECUTOR_CORES))"
+fi
+
 MEMORY_FRACTION="${MEMORY_FRACTION:-0.8}"
 
 EXAMPLES_CLASS="${EXAMPLES_CLASS:-org.apache.spark.examples.GroupByTest}"

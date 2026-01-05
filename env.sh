@@ -14,8 +14,10 @@ fi
 
 : "${SPARK_HOME:?SPARK_HOME is not set; export SPARK_HOME=/path/to/spark}"
 
-# Point Spark at this project's configuration directory.
-export SPARK_CONF_DIR="${_root_dir}/conf"
+# Point Spark at this project's configuration directory by default.
+# If the user already set SPARK_CONF_DIR (e.g. to compare against a vanilla Spark config),
+# respect it.
+export SPARK_CONF_DIR="${SPARK_CONF_DIR:-${_root_dir}/conf}"
 
-# Store daemon logs under this project.
-export SPARK_LOG_DIR="${_root_dir}/logs"
+# Store daemon logs under this project by default.
+export SPARK_LOG_DIR="${SPARK_LOG_DIR:-${_root_dir}/logs}"
