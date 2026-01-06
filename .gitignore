@@ -13,3 +13,6 @@ HiBench-7.1.1/conf/zzz-spark-apps.conf
 tpcds/queries/*.sql
 tpcds/queries/**/*.sql
 tpcds/__pycache__
+
+# Ad-hoc spark-submit capture from local runs.
+spark-submit.log

@@ -60,13 +60,18 @@ WORKER_CORES=8 WORKER_MEMORY=16g \
 # One executor per host: set WORKER_CORES == EXECUTOR_CORES and NUM_EXECUTORS == NUM_NODES.
 NUM_EXECUTORS=4 EXECUTOR_CORES=8 \
 EXECUTOR_MEMORY=8G DRIVER_MEMORY=8G \
-./submit-groupbytest.sh 32 800000 1024 32
+./submit-groupbytest-mn.sh 32 800000 1024 32
+
+# Native Spark baseline (SCache disabled):
+NUM_EXECUTORS=4 EXECUTOR_CORES=8 \
+EXECUTOR_MEMORY=8G DRIVER_MEMORY=8G \
+./submit-groupbytest-native-mn.sh 32 800000 1024 32
 ```
 
 Notes:
 
 - Override host list with `SPARK_SIM_HOSTS="127.0.0.2 127.0.0.3 127.0.0.4 127.0.0.5"`.
-- `conf/scache-multinode/scache.conf` defaults to `scache.daemon.ipc.backend=files` to avoid sharing a pool allocator across multiple ScacheClients.
+- `conf/scache-multinode/scache.conf` defaults to `scache.daemon.ipc.backend=pool` so Spark can pass `IpcPoolSlice` references (mmap offsets) instead of materializing shuffle bytes on disk.
 - Stop with `./stop-standalone-multinode.sh`.
 
 ## Logs and runtime state

@@ -191,12 +191,22 @@ start_scache_multinode() {
 
 start_scache_multinode
 
-# Ensure History Server UI port doesn't collide with master UI port.
+# Ensure History Server UI port doesn't collide with master/worker UI ports.
+history_ui_port="${SPARK_HISTORY_UI_PORT:-18082}"
+master_ui_port="${SPARK_MASTER_WEBUI_PORT:-18080}"
+worker_ui_min="${WORKER_WEBUI_PORT_BASE}"
+worker_ui_max="$((WORKER_WEBUI_PORT_BASE + NUM_NODES - 1))"
+
+if [[ "${history_ui_port}" -eq "${master_ui_port}" ]] || \
+   ([[ "${history_ui_port}" -ge "${worker_ui_min}" ]] && [[ "${history_ui_port}" -le "${worker_ui_max}" ]]); then
+  history_ui_port="$((worker_ui_max + 1))"
+  if [[ "${history_ui_port}" -eq "${master_ui_port}" ]]; then
+    history_ui_port="$((history_ui_port + 1))"
+  fi
+fi
+
 if [[ -z "${SPARK_HISTORY_OPTS:-}" ]]; then
-  history_ui_port="${SPARK_HISTORY_UI_PORT:-18082}"
   export SPARK_HISTORY_OPTS="-Dspark.history.ui.port=${history_ui_port}"
-else
-  history_ui_port="${SPARK_HISTORY_UI_PORT:-18082}"
 fi
 
 "${SPARK_HOME}/sbin/start-master.sh"

@@ -77,6 +77,15 @@ else
   exit 1
 fi
 
+extra_submit_args=()
+if [[ -n "${SPARK_SUBMIT_EXTRA_ARGS:-}" ]]; then
+  # Word-split is intentional to allow passing multiple args via a single env var.
+  # Example:
+  #   SPARK_SUBMIT_EXTRA_ARGS="--conf spark.scache.enable=false" ./submit-groupbytest.sh ...
+  # shellcheck disable=SC2206
+  extra_submit_args=(${SPARK_SUBMIT_EXTRA_ARGS})
+fi
+
 "${SPARK_HOME}/bin/spark-submit" \
   --class "${EXAMPLES_CLASS}" \
   --master "${master_url}" \
@@ -86,6 +95,7 @@ fi
   --executor-cores "${EXECUTOR_CORES}" \
   --conf "spark.cores.max=${CORES_MAX}" \
   --conf "spark.memory.fraction=${MEMORY_FRACTION}" \
+  "${extra_submit_args[@]}" \
   "${examples_jar}" \
   "$@"
 
