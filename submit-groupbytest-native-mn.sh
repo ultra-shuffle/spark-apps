@@ -26,10 +26,10 @@ fi
 
 _extra_args+=(
   --conf spark.scache.enable=false
+  --conf spark.scache.shuffle.noLocalFiles=false
   --conf spark.shuffle.useOldFetchProtocol=false
 )
 
 export SPARK_SUBMIT_EXTRA_ARGS="${_extra_args[*]}"
 
 exec "${_root_dir}/submit-groupbytest-mn.sh" "$@"
-
