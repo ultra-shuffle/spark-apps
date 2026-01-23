@@ -9,6 +9,13 @@ HiBench-7.1.1/conf/hadoop.conf
 HiBench-7.1.1/conf/spark.conf
 HiBench-7.1.1/conf/zzz-spark-apps.conf
 
+# Python caches
+__pycache__/
+*.pyc
+
+# Ablation-study outputs
+ablation-study/results/
+
 # TPC-DS: keep generated query texts out of git by default (license/corp policy dependent).
 tpcds/queries/*.sql
 tpcds/queries/**/*.sql

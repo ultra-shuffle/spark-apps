@@ -1,0 +1,42 @@
+diff --git a/src/main/scala/org/scache/MapOutputTracker.scala b/src/main/scala/org/scache/MapOutputTracker.scala
+index 2ea91dd..b7f6d22 100644
+--- a/src/main/scala/org/scache/MapOutputTracker.scala
++++ b/src/main/scala/org/scache/MapOutputTracker.scala
+@@ -198,16 +198,35 @@ private[scache] class MapOutputTrackerMaster(conf: ScacheConf, isLocal: Boolean)
+     }
+     val shuffleStatus = new ShuffleStatus(shuffleId, numMapTask, numReduceTask)
+ 
+-    // apply random reduce allocation
+-    val clientList = Random.shuffle(hostnameToClientId.keys.toList)
++    // Reduce placement policy (partition homes).
++    //
++    // - homes  : deterministic mapping reduceId -> host (stable partition homes)
++    // - random : randomized host order (baseline)
++    val placement =
++      conf.getString("scache.shuffle.reducePlacement", "random").trim.toLowerCase
++    val baseClients = hostnameToClientId.keys.toList
++    val clientList = placement match {
++      case "homes" | "home" | "deterministic" =>
++        baseClients.sorted
++      case "random" =>
++        Random.shuffle(baseClients)
++      case other =>
++        logWarning(s"Unknown scache.shuffle.reducePlacement=$other; falling back to random")
++        Random.shuffle(baseClients)
++    }
+     logDebug(s"Alive client list: ${clientList.size}, $clientList")
+     val numRep = Math.min(conf.getInt("scache.shuffle.replication", 0), clientList.size)
+     for (i <- 0 until numReduceTask) {
+       val p = i % clientList.size
+       val backups = (for (c <- clientList if c != clientList(p)) yield c)
+       shuffleStatus.reduceArray(i) = new ReduceStatus(i, clientList(p), Random.shuffle(backups).toArray.slice(0, numRep), numMapTask)
+       logInfo(s"Allocate shuffle ${shuffleKey.toString()} reduce $i to host ${clientList(p)}")
+     }
+     shuffleOutputStatus.putIfAbsent(shuffleKey, shuffleStatus)
+     val mapBlocksStatus = new Array[Int](numMapTask).map(x => numReduceTask)
+     shuffleMapBlocksStatus.putIfAbsent(shuffleKey, mapBlocksStatus)
+     logInfo(s"Register shuffle $appName:$jobId:$shuffleId with map:$numMapTask and reduce:$numReduceTask")
+ 
+     true
+   }
+
